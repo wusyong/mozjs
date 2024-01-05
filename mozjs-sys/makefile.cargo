@@ -39,8 +39,9 @@ endif
 ifeq (windows,$(findstring windows,$(TARGET)))
 	WINDOWS := 1
 	# Override any attempt to use the debug CRT when building with debug.
-	CFLAGS += -MD
-	CXXFLAGS += -MD
+	CFLAGS += -MD -Wl,--whole-archive
+	CXXFLAGS += -MD -Wl,--whole-archive
+	LDFLAGS += --whole-archive
 else
 	WINDOWS :=
 endif
@@ -159,5 +160,6 @@ maybe-configure:
 	  CPP="$(CPP)" CPPFLAGS="$(CPPFLAGS)" \
 	  CXX="$(CXX)" CXXFLAGS="$(CXXFLAGS)" \
 	  AS="$(AS)" AR="$(AR)" \
+		LDFLAGS="$(LDFLAGS)" \
 	  $(JSSRC)/configure $(strip $(CONFIGURE_FLAGS)) || (cat config.log && exit 1) ; \
 	fi

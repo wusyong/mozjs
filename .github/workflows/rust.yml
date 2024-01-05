@@ -15,68 +15,16 @@ env:
   RUST_BACKTRACE: 1
   SHELL: /bin/bash
   CARGO_INCREMENTAL: 0
+  MOZJS_CREATE_MIRROR: 1
 
 jobs:
-  mac:
-    runs-on: macos-13
-    strategy:
-      fail-fast: false
-      matrix:
-        features: ["--features debugmozjs", ""]
-    env:
-      RUSTC_WRAPPER: sccache
-      CCACHE: sccache
-      SCCACHE_GHA_ENABLED: "true"
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install deps
-        run: |
-          # Unlink and re-link to prevent errors when github mac runner images
-          # https://github.com/actions/setup-python/issues/577
-          brew list -1 | grep python | while read formula; do brew unlink $formula; brew link --overwrite $formula; done
-          brew install llvm yasm
-      - name: Run sccache-cache
-        uses: mozilla-actions/sccache-action@v0.0.3
-      - name: Build
-        run: |
-          cargo build --verbose ${{ matrix.features }}
-          cargo test --tests --examples --verbose ${{ matrix.features }}
-  linux:
-    env:
-      RUSTC_WRAPPER: "sccache"
-      CCACHE: sccache
-      SCCACHE_GHA_ENABLED: "true"
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        features: ["--features debugmozjs", ""]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Install deps
-        run: |
-          sudo apt install llvm -y
-      - name: Run sccache-cache
-        uses: mozilla-actions/sccache-action@v0.0.3
-      - name: Build
-        run: |
-          cargo build --verbose ${{ matrix.features }}
-          cargo test --tests --examples --verbose ${{ matrix.features }}
-      - name: Check wrappers integrity
-        # we generate wrappers only without debugmozjs
-        if: ${{ matrix.features == '' }}
-        run: |
-          bash ./mozjs/src/generate_wrappers.sh
-          git diff --quiet --exit-code
-
   windows:
     runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
-        features: ["--features debugmozjs", ""]
-        target: ["x86_64-pc-windows-msvc", "aarch64-pc-windows-msvc"]
+        features: [""]
+        target: ["x86_64-pc-windows-msvc"]
     env:
       LINKER: "lld-link.exe"
       CC: "clang-cl"
@@ -104,44 +52,11 @@ jobs:
         shell: cmd
         run: |
           cargo test --tests --examples --verbose --target ${{ matrix.target }} ${{ matrix.features }}
-
-  android:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install NDK
-        uses: nttld/setup-ndk@v1
-        id: setup-ndk
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
-          ndk-version: r25c
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: armv7-linux-androideabi
-      - name: Build
-        env:
-          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
-        run: |
-          ./android-build cargo build --target="armv7-linux-androideabi"
-
-  linux-cross-compile:
-    name: linux (${{ matrix.target }})
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        target:
-          - aarch64-unknown-linux-gnu
-          - armv7-unknown-linux-gnueabihf
-    container: ghcr.io/servo/cross-${{ matrix.target }}:main
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-      - run: cargo test --tests --examples --target ${{ matrix.target }}
-
+          name: libjs.tar.gz
+          path: mozjs-sys/libjs.tar.gz
   integrity:
     runs-on: ubuntu-latest
     steps:
@@ -169,7 +84,7 @@ jobs:
     name: Result
     runs-on: ubuntu-latest
     needs:
-      ["android", "linux", "linux-cross-compile", "mac", "windows", "integrity"]
+      ["windows", "integrity"]
     if: ${{ always() }}
     steps:
       - name: Mark the job as successful

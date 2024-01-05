@@ -719,31 +719,22 @@ mod jsglue {
 
 /// Compress spidermonkey build into a tarball with necessary static binaries and bindgen wrappers.
 fn compress_static_lib(build_dir: &Path) -> Result<(), std::io::Error> {
-    // Strip symbols from the static binary since it could bump up to 1.6GB on Linux.
-    // TODO: Maybe we could separate symbols for thos who still want the debug ability.
-    // https://github.com/GabrielMajeri/separate-symbols
-    let status = Command::new("strip")
-        .arg(build_dir.join("js/src/build/libjs_static.a"))
-        .status()
-        .unwrap();
-    assert!(status.success());
-
     let tar_gz = File::create("libjs.tar.gz")?;
     let enc = GzEncoder::new(tar_gz, Compression::default());
     let mut tar = tar::Builder::new(enc);
     // This is the static library of spidermonkey.
     tar.append_file(
-        "libjs_static.a",
-        &mut File::open(build_dir.join("js/src/build/libjs_static.a")).unwrap(),
+        "js_static.lib",
+        &mut File::open(build_dir.join("js/src/build/js_static.lib")).unwrap(),
     )?;
     // The bindgen binaries and generated rust files for mozjs.
     tar.append_file(
-        "libjsapi.a",
-        &mut File::open(build_dir.join("libjsapi.a")).unwrap(),
+        "jsapi.lib",
+        &mut File::open(build_dir.join("jsapi.lib")).unwrap(),
     )?;
     tar.append_file(
-        "libjsglue.a",
-        &mut File::open(build_dir.join("libjsglue.a")).unwrap(),
+        "jsglue.lib",
+        &mut File::open(build_dir.join("jsglue.lib")).unwrap(),
     )?;
     tar.append_file(
         "jsapi.rs",
@@ -778,7 +769,6 @@ fn download_static_lib_binaries(mirror: &Path, build_dir: &Path) {
     println!("cargo:rustc-link-search=native={}", build_dir.display());
     println!("cargo:rustc-link-lib=static=js_static"); // Must come before c++
     if target.contains("windows") {
-        println!("cargo:rustc-link-search=native={}", build_dir.display());
         println!("cargo:rustc-link-lib=winmm");
         println!("cargo:rustc-link-lib=psapi");
         println!("cargo:rustc-link-lib=user32");
