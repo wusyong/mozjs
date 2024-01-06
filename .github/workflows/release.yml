@@ -4,25 +4,21 @@ on:
   push:
     branches: [main]
   pull_request:
-  workflow_dispatch:
-  merge_group:
-    types: [checks_requested]
-  schedule:
-    # Runs at 03:30, every Saturday
-    - cron: "30 3 * * 6"
 
 env:
   RUST_BACKTRACE: 1
   SHELL: /bin/bash
   CARGO_INCREMENTAL: 0
+  MOZJS_CREATE_MIRROR: 1
 
 jobs:
   mac:
     runs-on: macos-13
+    needs: create-release
     strategy:
       fail-fast: false
       matrix:
-        features: ["--features debugmozjs", ""]
+        features: ["--features streams"]
     env:
       RUSTC_WRAPPER: sccache
       CCACHE: sccache
@@ -41,16 +37,26 @@ jobs:
         run: |
           cargo build --verbose ${{ matrix.features }}
           cargo test --tests --examples --verbose ${{ matrix.features }}
+      - name: Upload release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: mozjs-sys/libjs.tar.gz
+          asset_name: libjs-x86_64-apple-darwin.tar.gz
+          asset_content_type: application/x-gzip
   linux:
     env:
       RUSTC_WRAPPER: "sccache"
       CCACHE: sccache
       SCCACHE_GHA_ENABLED: "true"
     runs-on: ubuntu-latest
+    needs: create-release
     strategy:
       fail-fast: false
       matrix:
-        features: ["--features debugmozjs", ""]
+        features: ["--features streams"]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -63,20 +69,24 @@ jobs:
         run: |
           cargo build --verbose ${{ matrix.features }}
           cargo test --tests --examples --verbose ${{ matrix.features }}
-      - name: Check wrappers integrity
-        # we generate wrappers only without debugmozjs
-        if: ${{ matrix.features == '' }}
-        run: |
-          bash ./mozjs/src/generate_wrappers.sh
-          git diff --quiet --exit-code
+      - name: Upload release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: mozjs-sys/libjs.tar.gz
+          asset_name: libjs-x86_64-unknown-linux-gnu.tar.gz
+          asset_content_type: application/x-gzip
 
   windows:
     runs-on: windows-latest
+    needs: create-release
     strategy:
       fail-fast: false
       matrix:
-        features: ["--features debugmozjs", ""]
-        target: ["x86_64-pc-windows-msvc", "aarch64-pc-windows-msvc"]
+        features: ["--features streams"]
+        target: ["x86_64-pc-windows-msvc"]
     env:
       LINKER: "lld-link.exe"
       CC: "clang-cl"
@@ -104,77 +114,47 @@ jobs:
         shell: cmd
         run: |
           cargo test --tests --examples --verbose --target ${{ matrix.target }} ${{ matrix.features }}
-
-  android:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install NDK
-        uses: nttld/setup-ndk@v1
-        id: setup-ndk
-        with:
-          ndk-version: r25c
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: armv7-linux-androideabi
-      - name: Build
+      - name: Upload release asset
+        uses: actions/upload-release-asset@v1
         env:
-          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
-        run: |
-          ./android-build cargo build --target="armv7-linux-androideabi"
-
-  linux-cross-compile:
-    name: linux (${{ matrix.target }})
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        target:
-          - aarch64-unknown-linux-gnu
-          - armv7-unknown-linux-gnueabihf
-    container: ghcr.io/servo/cross-${{ matrix.target }}:main
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          targets: ${{ matrix.target }}
-      - run: cargo test --tests --examples --target ${{ matrix.target }}
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: mozjs-sys/libjs.tar.gz
+          asset_name: libjs-x86_64-pc-windows-msvc.tar.gz
+          asset_content_type: application/x-gzip
 
-  integrity:
+  create-release:
     runs-on: ubuntu-latest
+    outputs: 
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      release_id: ${{ steps.create_release.outputs.id }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Check formatting
-        run: cargo fmt --check
-      - name: Get mozjs
-        run: |
-          bash ./mozjs-sys/etc/get_mozjs.sh
-      - name: Apply patch
-        run: |
-          python3 ./mozjs-sys/etc/update.py --no-commit mozjs.tar.xz
-          # Run `git add` here to force CRLF converted into LF
-          # so that we can check diff properly in next run
-          git add --all mozjs
-      - name: Check patch integrity
-        working-directory: ./mozjs-sys
-        # Because we've added files in previous run, we need to
-        # check diff with `--staged`.
-        run: |
-          git diff --staged --no-ext-diff --quiet --exit-code
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: tag-${{ github.sha }}
+          release_name: Release ${{ github.sha }}
+          draft: true
+          prerelease: false
 
-  build_result:
+  publish-release:
     name: Result
     runs-on: ubuntu-latest
     needs:
-      ["android", "linux", "linux-cross-compile", "mac", "windows", "integrity"]
+      ["mac", "windows", "create-release"]
     if: ${{ always() }}
     steps:
-      - name: Mark the job as successful
+      - name: Publish release and mark job successful
         if: ${{ !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
-        run: exit 0
+        uses: eregon/publish-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          release_id: ${{ needs.create-release.outputs.release_id }}
       - name: Mark the job as unsuccessful
         if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
         run: exit 1
