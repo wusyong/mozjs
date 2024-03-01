@@ -215,8 +215,4 @@ jobs:
       - name: Publish release
         run: |
           RELEASE_TAG=$(date "+%F")
-          gh release create ${RELEASE_TAG} \
-          libmozjs-aarch64-apple-darwin.tar.gz \
-          libmozjs-x86_64-apple-darwin.tar.gz \
-          libmozjs-x86_64-unknown-linux-gnu.tar.gz \
-          libmozjs-x86_64-pc-windows-msvc.tar.gz
+          gh release create ${RELEASE_TAG} ./*.tar.gz
