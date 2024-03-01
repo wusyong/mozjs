@@ -215,4 +215,5 @@ jobs:
       - name: Publish release
         run: |
           RELEASE_TAG=$(date "+%F")
-          gh release create ${RELEASE_TAG} ./*.tar.gz
+      - name: Display structure of downloaded files
+        run: ls -R
