@@ -10,6 +10,7 @@ use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::fs::File;
+use std::io::Seek;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str;
@@ -783,6 +784,28 @@ fn compress_static_lib(build_dir: &Path) -> Result<(), std::io::Error> {
     Ok(())
 }
 
+const ARCHIVE_URL: &'static str = "https://github.com/wusyong/mozjs/releases/download/2024-03-01/libmozjs";
+
+/// Download spidermonkey archive by curl
+fn download_archive() -> PathBuf {
+    let target = env::var("TARGET").unwrap();
+    let archive_path = PathBuf::from(env::var_os("OUT_DIR").unwrap()).join("libmozjs.tar.gz");
+    // Only download the files if the archive doesn't exist.
+    if !archive_path.exists() {
+        Command::new("curl")
+            .arg("-L")
+            .arg("-f")
+            .arg("-s")
+            .arg("-o")
+            .arg(&archive_path)
+            .arg(format!("{}-{}.tar.gz", ARCHIVE_URL, target))
+            .status()
+            .unwrap();
+    }
+
+    archive_path
+}
+
 /// Decompress the archive of spidermonkey build to to build directory.
 fn decompress_static_lib(archive: &Path, build_dir: &Path) -> Result<(), std::io::Error> {
     // Try to open the archive from provided path. If it doesn't exist, try to open it as relative
@@ -802,8 +825,8 @@ fn decompress_static_lib(archive: &Path, build_dir: &Path) -> Result<(), std::io
 fn download_static_lib_binaries(archive: &Path, build_dir: &Path) {
     // Only download the files if build directory doesn't exist.
     if !build_dir.exists() {
-        // TODO download from https
-        decompress_static_lib(archive, build_dir).expect("Failed to decompress static libs");
+        let archive = download_archive();
+        decompress_static_lib(&archive, build_dir).expect("Failed to decompress static libs");
     }
 
     // Link static lib binaries

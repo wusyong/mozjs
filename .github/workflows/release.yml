@@ -12,8 +12,19 @@ env:
   CARGO_INCREMENTAL: 0
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   REPO: ${{ github.repository_owner }}/mozjs
+  MOZJS_ARCHIVE: libmozjs.tar.gz
 
 jobs:
+  release-date:
+    runs-on: ubuntu-latest
+    steps:
+      - name: get-date
+        run: |
+          RELEASE_DATE=$(date "+%F")
+          echo "RELEASE_TAG=${RELEASE_DATE}" >> ${GITHUB_OUTPUT}
+    outputs:
+      release-tag: ${{ steps.get-date.outputs.RELEASE_TAG }}
+
   mac:
     strategy:
       fail-fast: false
@@ -23,6 +34,7 @@ jobs:
           - { target: aarch64-apple-darwin, os: macos-14 }
           - { target: x86_64-apple-darwin, os: macos-13 }
     runs-on: ${{ matrix.platform.os }}
+    needs: release-date
     env:
       RUSTC_WRAPPER: sccache
       CCACHE: sccache
@@ -37,6 +49,9 @@ jobs:
           brew install llvm yasm
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.3
+      # - name: Download prebuilt mozjs
+      #   run: |
+      #     curl -L https://github.com/${REPO}/releases/download/${{ needs.release-date.outputs.release-tag }}/libmozjs-${{ matrix.platform.target }}.tar.gz -o libmozjs.tar.gz
       - name: Build
         run: |
           cargo build --verbose ${{ matrix.features }}
@@ -48,6 +63,7 @@ jobs:
       CCACHE: sccache
       SCCACHE_GHA_ENABLED: "true"
     runs-on: ubuntu-latest
+    needs: release-date
     strategy:
       fail-fast: false
       matrix:
@@ -60,6 +76,9 @@ jobs:
           sudo apt install llvm -y
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.3
+      # - name: Download prebuilt mozjs
+      #   run: |
+      #     curl -L https://github.com/${REPO}/releases/download/${{ needs.release-date.outputs.release-tag }}/libmozjs-x86_64-unknown-linux-gnu.tar.gz -o libmozjs.tar.gz
       - name: Build
         run: |
           cargo build --verbose ${{ matrix.features }}
@@ -73,11 +92,11 @@ jobs:
 
   windows:
     runs-on: windows-latest
+    needs: release-date
     strategy:
       fail-fast: false
       matrix:
         features: ["--features streams"]
-        target: ["x86_64-pc-windows-msvc"]
     env:
       LINKER: "lld-link.exe"
       CC: "clang-cl"
@@ -96,11 +115,14 @@ jobs:
           cd target/dependencies && unzip -qo moztools.zip -d .
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.3
+      # - name: Download prebuilt mozjs
+      #   run: |
+      #     curl -L https://github.com/${REPO}/releases/download/${{ needs.release-date.outputs.release-tag }}/libmozjs-x86_64-pc-windows-msvc.tar.gz -o libmozjs.tar.gz
       - name: Build Windows
         shell: cmd
         run: |
-          cargo build --verbose --target ${{ matrix.target }} ${{ matrix.features }}
-          cargo test --tests --examples --verbose --target ${{ matrix.target }} ${{ matrix.features }}
+          cargo build --verbose ${{ matrix.features }}
+          cargo test --tests --examples --verbose ${{ matrix.features }}
 
   build_result:
     name: Result
