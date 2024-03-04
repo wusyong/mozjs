@@ -14,7 +14,6 @@ env:
   RUST_BACKTRACE: 1
   SHELL: /bin/bash
   CARGO_INCREMENTAL: 0
-  MOZJS_ARCHIVE: libmozjs.tar.gz
 
 jobs:
   release-tag:
@@ -41,6 +40,8 @@ jobs:
           - { target: x86_64-pc-windows-msvc, os: windows-latest }
     runs-on: ${{ matrix.platform.os }}
     needs: release-tag
+    env:
+      MOZJS_ARCHIVE: libmozjs-${{ matrix.platform.target }}.tar.gz
     steps:
       - uses: actions/checkout@v4
       - name: Download prebuilt mozjs from artifact
@@ -51,7 +52,9 @@ jobs:
       - name: Download prebuilt mozjs from release
         if: ${{ needs.release-tag.outputs.release-tag != '' }}
         run: |
-          curl -L https://github.com/${{ github.repository_owner }}/mozjs/releases/download/${{ needs.release-tag.outputs.release-tag }}/libmozjs-${{ matrix.platform.target }}.tar.gz -o libmozjs.tar.gz
+          curl -L https://github.com/${{ github.repository_owner }}/mozjs/releases/download/${{ needs.release-tag.outputs.release-tag }}/libmozjs-${{ matrix.platform.target }}.tar.gz
+      - name: Display structure of downloaded files
+        run: ls -R
       - name: Build
         run: |
           cargo build --verbose --features streams
