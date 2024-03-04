@@ -24,7 +24,7 @@ jobs:
     steps:
       - id: tag-name
         run: |
-          if [[ ${{ github.event_name }} == 'workflow_call' ]]; then
+          if [[ '${{ inputs.release-tag }}' != '' ]]; then
             echo "RELEASE_TAG=${{ inputs.release-tag }}" >> ${GITHUB_OUTPUT}
           elif [[ ${{ github.event_name }} == 'release' ]]; then
             echo "RELEASE_TAG=${{ github.ref_name }}" >> ${GITHUB_OUTPUT}
