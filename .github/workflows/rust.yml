@@ -210,7 +210,7 @@ jobs:
           echo "RELEASE_TAG=${RELEASE_TAG}" >> ${GITHUB_OUTPUT}
       - name: Publish release
         if: ${{ steps.check-tag.outputs.RELEASE_TAG != '' }}
-        run: gh release create ${RELEASE_TAG} ./*.tar.gz
+        run: gh release create ${{ steps.check-tag.outputs.RELEASE_TAG }} ./*.tar.gz
     outputs:
       release-tag: ${{ steps.check-tag.outputs.RELEASE_TAG }}
 
