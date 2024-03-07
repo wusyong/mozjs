@@ -87,6 +87,17 @@ jobs:
         with:
           path: ./target/libmozjs-x86_64-unknown-linux-gnu.tar.gz
           name: libmozjs-x86_64-unknown-linux-gnu.tar.gz
+      - name: Output mozjs-sys version
+        id: check-tag
+        if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+        run: |
+          RELEASE_TAG=mozjs-sys-v$(cargo pkgid -p mozjs_sys | cut -d "@" -f2)
+          if git show-ref --tags --verify --quiet "refs/tags/${RELEASE_TAG}"; then
+            RELEASE_TAG=''
+          fi 
+          echo "RELEASE_TAG=${RELEASE_TAG}" >> ${GITHUB_OUTPUT}
+    outputs:
+      release-tag: ${{ steps.check-tag.outputs.RELEASE_TAG }}
 
   windows:
     runs-on: windows-latest
@@ -200,19 +211,11 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           merge-multiple: true
-      - id: check-tag
-        if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
-        run: |
-          RELEASE_TAG=mozjs-sys-v$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[] | select(.name == "mozjs_sys") | .version')
-          if git show-ref --tags --verify --quiet "refs/tags/${RELEASE_TAG}"; then
-            RELEASE_TAG=''
-          fi 
-          echo "RELEASE_TAG=${RELEASE_TAG}" >> ${GITHUB_OUTPUT}
       - name: Publish release
-        if: ${{ steps.check-tag.outputs.RELEASE_TAG != '' }}
-        run: gh release create ${{ steps.check-tag.outputs.RELEASE_TAG }} ./*.tar.gz
+        if: ${{ needs.linux.outputs.release-tag != '' }}
+        run: gh release create ${{ needs.linux.outputs.release-tag }} ./*.tar.gz
     outputs:
-      release-tag: ${{ steps.check-tag.outputs.RELEASE_TAG }}
+      release-tag: ${{ needs.linux.outputs.release-tag }}
 
   verify-release:
     name: Verify release
