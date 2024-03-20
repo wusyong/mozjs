@@ -9,7 +9,20 @@ that are battle-tested in [Servo](https://servo.org/), split in two crates:
 Mozjs is currently tracking SpiderMonkey on [ESR-115](https://searchfox.org/mozilla-esr115/source/) branch
 (currently version 115.3).
 
-## Building
+## Binary Build
+
+Spidermonkey is very large which could take a long time to compile. Mozjs provides prebuilt archive to download and link during build script by default.
+You can also create your own archive and link to it. Mozjs currently offer two environment variables to enable such work:
+
+- `MOZJS_CREATE_ARCHIVE=1` can create a spidermonkey tarball for release usage. It will be created in `target` directory.
+- `MOZJS_ARCHIVE` can use this tarball without compiling spidermonkey and bindgen wrappers. It has 2 usages to specify the archive:
+   - `MOZJS_ARCHIVE=path/to/libmozjs.tar.gz` will find the tarball in local path, extract, and then link to the static libraries.
+   - `MOZJS_ARCHIVE=https://url/to/release/page` will download the archive with provided url as base, extract, and then link to it. The base url should
+   be similar to `https://github.com/servo/mozjs/releases/download`. The build script will append the version and target accordingly.
+
+## Building from Source
+
+If `MOZJS_FROM_SOURCE=1` is enabled or steps to link prebuilt archive fails, mozjs will try to build the spidermonky from source. 
 
 ### Linux
 
@@ -84,14 +97,6 @@ cargo build --features debugmozjs
 cargo test --features debugmozjs
 ```
 
-### Create and link prebuilt binary
-
-Spidermonkey is very large which could take a long time to compile. If you are looking for prebuilt version of mozjs, you
-can ask someone to build it and share to you to link it. Mozjs currently offer two environment variables to enable such work:
-
-- `MOZJS_CREATE_ARCHIVE=1` can create a spidermonkey tarball for release usage. It will be created in `target` directory.
-- `MOZJS_ARCHIVE=path/to/libmozjs.tar.gz` can use this tarball to extract and link the static libraries without compiling spidermonkey and bindgen wrappers.
-
 ### Usage for downstream consumers
 
 Mozjs is currently not published to crates.io, but it can be used from git (binaries should use lockfile instead of `rev`):
@@ -127,7 +132,7 @@ In order to upgrade to a new version of SpiderMonkey:
 
 4. Run `python3 ./mozjs-sys/etc/update.py path/to/tarball`.
 
-5. Update `mozjs-sys/etc/COMMIT` with the commit number.
+5. Update `mozjs-sys/etc/COMMIT` with the commit number and mozjs-sys version with SpiderMonkey version.
 
 6. Run `./mozjs/src/generate_wrappers.sh` to regenerate wrappers.
 
