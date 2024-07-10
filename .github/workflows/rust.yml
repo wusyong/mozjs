@@ -40,6 +40,9 @@ jobs:
           # https://github.com/actions/setup-python/issues/577
           brew list -1 | grep python | while read formula; do brew unlink $formula; brew link --overwrite $formula; done
           brew install llvm yasm
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "15.2"
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.4
       - name: Build
