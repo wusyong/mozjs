@@ -94,11 +94,6 @@ if CONFIG["MOZ_WIDGET_TOOLKIT"]:
             "ppc.cpp",
         ]
 
-    if CONFIG["MOZ_LINKER"]:
-        USE_LIBS += [
-            "zlib",
-        ]
-
 USE_LIBS += [
     "mfbt",
 ]
