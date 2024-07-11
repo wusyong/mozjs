@@ -16,7 +16,6 @@ else:
 DIRS += [
     "/config/external/fdlibm",
     "/config/external/nspr",
-    "/config/external/zlib",
     "/memory",
     "/mfbt",
     "/mozglue",
