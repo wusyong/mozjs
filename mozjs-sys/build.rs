@@ -822,47 +822,28 @@ fn compress_static_lib(build_dir: &Path) -> Result<(), std::io::Error> {
     let enc = GzEncoder::new(tar_gz, Compression::default());
     let mut tar = tar::Builder::new(enc);
 
-    if target.contains("windows") {
-        // FIXME We can't figure how to include all symbols into the static file.
-        // So we compress whole build dir as workaround.
-        tar.append_dir_all(".", build_dir)?;
-    } else {
-        // Strip symbols from the static binary since it could bump up to 1.6GB on Linux.
-        // TODO: Maybe we could separate symbols for thos who still want the debug ability.
-        // https://github.com/GabrielMajeri/separate-symbols
-        let mut strip = Command::new("strip");
-        if !target.contains("apple") {
-            strip.arg("--strip-debug");
-        };
-        let status = strip
-            .arg(build_dir.join("js/src/build/libjs_static.a"))
-            .status()
-            .unwrap();
-        assert!(status.success());
-
-        // This is the static library of spidermonkey.
-        tar.append_file(
-            "js/src/build/libjs_static.a",
-            &mut File::open(build_dir.join("js/src/build/libjs_static.a")).unwrap(),
-        )?;
-        // The bindgen binaries and generated rust files for mozjs.
-        tar.append_file(
-            "libjsapi.a",
-            &mut File::open(build_dir.join("libjsapi.a")).unwrap(),
-        )?;
-        tar.append_file(
-            "libjsglue.a",
-            &mut File::open(build_dir.join("libjsglue.a")).unwrap(),
-        )?;
-        tar.append_file(
-            "jsapi.rs",
-            &mut File::open(build_dir.join("jsapi.rs")).unwrap(),
-        )?;
-        tar.append_file(
-            "gluebindings.rs",
-            &mut File::open(build_dir.join("gluebindings.rs")).unwrap(),
-        )?;
-    }
+    // This is the static library of spidermonkey.
+    tar.append_file(
+        "js/src/build/libjs_static.a",
+        &mut File::open(build_dir.join("js/src/build/libjs_static.a")).unwrap(),
+    )?;
+    // The bindgen binaries and generated rust files for mozjs.
+    tar.append_file(
+        "libjsapi.a",
+        &mut File::open(build_dir.join("libjsapi.a")).unwrap(),
+    )?;
+    tar.append_file(
+        "libjsglue.a",
+        &mut File::open(build_dir.join("libjsglue.a")).unwrap(),
+    )?;
+    tar.append_file(
+        "jsapi.rs",
+        &mut File::open(build_dir.join("jsapi.rs")).unwrap(),
+    )?;
+    tar.append_file(
+        "gluebindings.rs",
+        &mut File::open(build_dir.join("gluebindings.rs")).unwrap(),
+    )?;
     Ok(())
 }
 
