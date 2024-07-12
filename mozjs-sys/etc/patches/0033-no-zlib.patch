@@ -1,0 +1,79 @@
+diff --git a/config/external/zlib/moz.build b/config/external/zlib/moz.build
+deleted file mode 100644
+index 755400fa7f8..00000000000
+--- a/config/external/zlib/moz.build
++++ /dev/null
+@@ -1,21 +0,0 @@
+-# -*- Mode: python; indent-tabs-mode: nil; tab-width: 40 -*-
+-# vim: set filetype=python:
+-# This Source Code Form is subject to the terms of the Mozilla Public
+-# License, v. 2.0. If a copy of the MPL was not distributed with this
+-# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+-
+-Library("zlib")
+-
+-if CONFIG["MOZ_SYSTEM_ZLIB"]:
+-    OS_LIBS += CONFIG["MOZ_ZLIB_LIBS"]
+-else:
+-    if CONFIG["ZLIB_IN_MOZGLUE"]:
+-        # Can't do this until mozglue is handled by moz.build instead of
+-        # config/rules.mk.
+-        # USE_LIBS += [
+-        #     'mozglue'
+-        # ]
+-        pass
+-    DIRS += [
+-        "../../../modules/zlib",
+-    ]
+diff --git a/js/app.mozbuild b/js/app.mozbuild
+index 10a127ac3bb..d768b631342 100644
+--- a/js/app.mozbuild
++++ b/js/app.mozbuild
+@@ -16,7 +16,6 @@ else:
+ DIRS += [
+     "/config/external/fdlibm",
+     "/config/external/nspr",
+-    "/config/external/zlib",
+     "/memory",
+     "/mfbt",
+     "/mozglue",
+diff --git a/js/src/build/moz.build b/js/src/build/moz.build
+index 73cb091135..736505ee2f 100644
+--- a/js/src/build/moz.build
++++ b/js/src/build/moz.build
+@@ -52,7 +52,6 @@ if CONFIG["JS_HAS_INTL_API"]:
+ USE_LIBS += [
+     "fdlibm",
+     "nspr",
+-    "zlib",
+ ]
+ 
+ if CONFIG["OS_ARCH"] != "WINNT":
+diff --git a/js/src/js-standalone.mozbuild b/js/src/js-standalone.mozbuild
+index 4dcaf04696..ccca828611 100644
+--- a/js/src/js-standalone.mozbuild
++++ b/js/src/js-standalone.mozbuild
+@@ -9,7 +9,6 @@
+ 
+ USE_LIBS += [
+     "jsrust",
+-    "zlib",
+ ]
+ 
+ if CONFIG["OS_ARCH"] == "WINNT":
+diff --git a/mozglue/build/moz.build b/mozglue/build/moz.build
+index f982f7dc49..f4a033d02d 100644
+--- a/mozglue/build/moz.build
++++ b/mozglue/build/moz.build
+@@ -94,11 +94,6 @@ if CONFIG["MOZ_WIDGET_TOOLKIT"]:
+             "ppc.cpp",
+         ]
+ 
+-    if CONFIG["MOZ_LINKER"]:
+-        USE_LIBS += [
+-            "zlib",
+-        ]
+-
+ USE_LIBS += [
+     "mfbt",
+ ]
