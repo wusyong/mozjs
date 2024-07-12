@@ -825,17 +825,17 @@ fn compress_static_lib(build_dir: &Path) -> Result<(), std::io::Error> {
     if target.contains("windows") {
         // This is the static library of spidermonkey.
         tar.append_file(
-            "js/src/build/libjs_static.lib",
-            &mut File::open(build_dir.join("js/src/build/libjs_static.lib")).unwrap(),
+            "js/src/build/js_static.lib",
+            &mut File::open(build_dir.join("js/src/build/js_static.lib")).unwrap(),
         )?;
         // The bindgen binaries and generated rust files for mozjs.
         tar.append_file(
-            "libjsapi.lib",
-            &mut File::open(build_dir.join("libjsapi.lib")).unwrap(),
+            "jsapi.lib",
+            &mut File::open(build_dir.join("jsapi.lib")).unwrap(),
         )?;
         tar.append_file(
-            "libjsglue.lib",
-            &mut File::open(build_dir.join("libjsglue.lib")).unwrap(),
+            "jsglue.lib",
+            &mut File::open(build_dir.join("jsglue.lib")).unwrap(),
         )?;
         tar.append_file(
             "jsapi.rs",
