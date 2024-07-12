@@ -332,12 +332,14 @@ fn build_spidermonkey(build_dir: &Path) {
     if target.contains("windows") {
         let mut make_static = cc::Build::new();
         for obj in std::fs::read_to_string(build_dir.join("js/src/build/js_static_lib.list"))
-            .unwrap()  // panic on possible file-reading errors
-            .lines()  // split the string into an iterator of string slices
-            .map(String::from) {
+            .unwrap() // panic on possible file-reading errors
+            .lines() // split the string into an iterator of string slices
+            .map(String::from)
+        {
             make_static.object(obj);
         }
         make_static.static_flag(true);
+        make_static.out_dir(build_dir.join("js/src/build"));
         make_static.compile("js_static");
     }
 
